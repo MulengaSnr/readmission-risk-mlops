@@ -6,7 +6,7 @@ Taking a validated healthcare model from a laptop to a versioned, tested, monito
 ![Python](https://img.shields.io/badge/python-3.12-blue)
 ![Licence](https://img.shields.io/badge/licence-MIT-green)
 
-**Status:** In development, step 3 of 7 (prediction API, running locally). Nothing is deployed yet.
+**Status:** In development, step 4 of 7 (container image and CI/CD). Not deployed to the cloud yet.
 
 ## The problem
 [`readmission-risk-model`](https://github.com/MulengaSnr/readmission-risk-model) built a calibrated, explained and fairness-audited model that predicts 30-day readmission for patients with diabetes. A model on a laptop helps no one. A care team needs a service that scores a discharge on request, explains the score, can be traced to the exact model that produced it, and warns when something drifts. This project shows the difference between **developing** a model and **operating** one.
@@ -57,6 +57,22 @@ Example response for an 80–90-year-old with 4 inpatient stays in the previous 
 - **Prediction log:** one JSON line per prediction (time, request ID, model version, inputs, score) feeds monitoring in step 5.
 - **Speed:** about 90 ms per explained prediction on a laptop.
 
+## Container and CI/CD
+**Image** ([Dockerfile](Dockerfile)): a two-stage build. uv installs the locked runtime dependencies only (no MLflow, no test tools), and the slim runtime image holds the environment, the code and the model.
+- Base images are **pinned by digest**, so rebuilds are reproducible.
+- Runs as a **non-root** user, with a Docker `HEALTHCHECK`. `/health` returns 503 when no model is loaded, so a broken container is marked unhealthy.
+- **850 MB**, down from 1.08 GB, by leaving out pyarrow (170 MB), which only reads parquet. Predictions on 500 real test encounters are **identical** with and without it.
+
+**Pipeline** ([ci.yml](.github/workflows/ci.yml)):
+
+| Job | When | What |
+|---|---|---|
+| `lint-and-test` | Every PR and push | ruff + pytest |
+| `container` | Every PR and push | Builds the image around a tiny **synthetic** model, runs it and smoke-tests it: health, model info, prediction, identifier and typo rejection, non-root, Docker health check |
+| `release` | Merges to `main` | Downloads the data (cached, re-verified by SHA-256), **retrains the real model**, fails the build if the promotion checks fail, exports it, builds and smoke-tests the image, and pushes it to GitHub Container Registry as `sha-<commit>` and `latest` |
+
+Training is deterministic, so CI rebuilds exactly the model validated locally from code and data, and every image can be traced to a commit, a data checksum and passed promotion checks. Images from this private repo are private in the registry.
+
 ## Data and governance
 - Public, de-identified UCI Diabetes 130-US Hospitals data (CC BY 4.0). No real or personal data is used. Production traffic is simulated by replaying held-out records.
 - Data preparation reuses project 1's code, installed as a library pinned to its [`v1.0` release](https://github.com/MulengaSnr/readmission-risk-model/releases/tag/v1.0).
@@ -70,6 +86,8 @@ make data        # download (SHA-256 verified), clean, split: identical to proje
 make train       # cross-validate, fit, log to MLflow, register, promote if checks pass
 make export      # champion model -> artifacts/model/
 make serve       # API on http://127.0.0.1:8000 (docs at /docs)
+make image       # build the Docker image around artifacts/model
+make smoke       # run the image and smoke-test it
 make check       # lint + tests
 ```
 
@@ -77,7 +95,7 @@ make check       # lint + tests
 - [x] 1. Scaffold, project 1 dependency, design
 - [x] 2. Training pipeline with MLflow tracking and registry
 - [x] 3. FastAPI service with validation, explanations and tests
-- [ ] 4. Docker image and container smoke test in CI
+- [x] 4. Docker image and container smoke test in CI
 - [ ] 5. Monitoring and replay simulation
 - [ ] 6. Azure deployment (free tier)
 - [ ] 7. README, model card and runbook
