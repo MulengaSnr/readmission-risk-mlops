@@ -1,4 +1,4 @@
-.PHONY: setup lint format test check data train export mlflow-ui serve
+.PHONY: setup lint format test check data train export mlflow-ui serve image smoke
 
 setup:   ## Create the virtual environment and install dependencies
 	uv sync
@@ -30,3 +30,12 @@ mlflow-ui: ## Browse runs and the registry at http://127.0.0.1:5000
 
 serve:   ## Run the API locally on http://127.0.0.1:8000 (docs at /docs)
 	uv run uvicorn readmission_mlops.service.app:app --host 127.0.0.1 --port 8000
+
+image:   ## Build the API image around artifacts/model (run make export first)
+	docker build -t readmission-api:local --build-arg GIT_COMMIT=$$(git rev-parse --short HEAD) .
+
+smoke:   ## Run the image and smoke-test it, then stop it
+	docker rm -f readmission-api >/dev/null 2>&1 || true
+	docker run -d --name readmission-api -p 8000:8000 readmission-api:local
+	uv run python scripts/smoke_test.py http://127.0.0.1:8000; status=$$?; \
+	docker rm -f readmission-api >/dev/null; exit $$status

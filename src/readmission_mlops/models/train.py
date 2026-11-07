@@ -279,10 +279,18 @@ def _jsonable(value: Any) -> Any:
 
 def main() -> None:
     """Command-line entry point."""
-    argparse.ArgumentParser(description=__doc__.splitlines()[0]).parse_args()
+    parser = argparse.ArgumentParser(description=__doc__.splitlines()[0])
+    parser.add_argument(
+        "--require-promotion",
+        action="store_true",
+        help="exit with an error if the model fails the promotion gates (CI)",
+    )
+    args = parser.parse_args()
     logging.basicConfig(level=logging.INFO, format="%(asctime)s %(message)s")
     result = train(load_config())
     print(json.dumps(result, indent=2, default=_jsonable))
+    if args.require_promotion and not result["promoted"]:
+        raise SystemExit(f"Promotion gates failed: {result['promotion_failures']}")
 
 
 if __name__ == "__main__":

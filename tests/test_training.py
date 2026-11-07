@@ -122,3 +122,27 @@ def test_train_register_promote_export(tmp_path, monkeypatch):
         (export_champion(config, root=tmp_path) / "metadata.json").read_text()
     )
     assert str(meta_again["model_version"]) == "1"
+
+
+# --- archive reuse -------------------------------------------------------
+
+
+def test_ensure_archive_reuses_only_a_verified_file(tmp_path, monkeypatch):
+    import hashlib
+
+    from readmission_mlops.data import prepare
+
+    archive = tmp_path / "data.zip"
+    archive.write_bytes(b"good")
+    good = hashlib.sha256(b"good").hexdigest()
+    calls = []
+    monkeypatch.setattr(
+        prepare, "fetch", lambda url, dest, sha: calls.append(url) or dest
+    )
+
+    assert prepare.ensure_archive("http://x", archive, good) == archive
+    assert calls == []  # verified: no download
+
+    archive.write_bytes(b"tampered")
+    prepare.ensure_archive("http://x", archive, good)
+    assert calls == ["http://x"]  # checksum failed: downloaded again

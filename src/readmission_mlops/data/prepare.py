@@ -27,7 +27,12 @@ from readmission_risk.data.clean import (
     read_raw,
     validate,
 )
-from readmission_risk.data.download import extract_members, fetch
+from readmission_risk.data.download import (
+    ChecksumError,
+    extract_members,
+    fetch,
+    verify_checksum,
+)
 from readmission_risk.data.split import patient_split
 
 from readmission_mlops.config import PROJECT_ROOT, load_config
@@ -54,6 +59,30 @@ def data_fingerprint(df: pd.DataFrame) -> str:
     return hashlib.sha256(payload).hexdigest()[:16]
 
 
+def ensure_archive(url: str, dest: Path, sha256: str) -> Path:
+    """Reuse ``dest`` if its checksum matches; otherwise download it.
+
+    Lets CI cache the archive between runs without trusting the cache: a
+    corrupted or tampered file fails the checksum and is fetched again.
+
+    Args:
+        url: Source URL.
+        dest: Archive path.
+        sha256: Expected SHA-256 hex digest.
+
+    Returns:
+        ``dest``, verified.
+    """
+    if dest.exists():
+        try:
+            verify_checksum(dest, sha256)
+            logger.info("Reusing verified archive %s", dest)
+            return dest
+        except ChecksumError:
+            logger.warning("Cached archive failed its checksum; downloading again")
+    return fetch(url, dest, sha256)
+
+
 def prepare(config: dict[str, Any], root: Path = PROJECT_ROOT) -> dict[str, Any]:
     """Run download -> clean -> validate -> split and write parquet files.
 
@@ -69,7 +98,7 @@ def prepare(config: dict[str, Any], root: Path = PROJECT_ROOT) -> dict[str, Any]
     processed.mkdir(parents=True, exist_ok=True)
     ds = config["dataset"]
 
-    archive = fetch(ds["url"], raw / ds["archive_name"], ds["sha256"])
+    archive = ensure_archive(ds["url"], raw / ds["archive_name"], ds["sha256"])
     extract_members(archive, ds["members"], raw)
     cleaned, _ = clean(
         read_raw(raw / "diabetic_data.csv"), parse_id_mappings(raw / "IDS_mapping.csv")

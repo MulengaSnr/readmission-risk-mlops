@@ -5,6 +5,13 @@ on:
     branches: [main]
   pull_request:
 
+permissions:
+  contents: read
+
+env:
+  MLFLOW_DISABLE_AGENT_HINT: "1"
+  IMAGE: ghcr.io/mulengasnr/readmission-risk-mlops
+
 jobs:
   lint-and-test:
     runs-on: ubuntu-latest
@@ -21,3 +28,88 @@ jobs:
           uv run ruff format --check .
       - name: Test
         run: uv run pytest --cov=src --cov-report=term-missing
+
+  # Every PR and push: build the image around a tiny synthetic model and
+  # smoke-test the running container. Tests the image, not the model.
+  container:
+    needs: lint-and-test
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: astral-sh/setup-uv@v6
+        with:
+          enable-cache: true
+      - run: uv sync --locked
+      - name: Build synthetic test model
+        run: uv run python -m readmission_mlops.synthetic artifacts/model
+      - name: Build image
+        run: docker build -t readmission-api:ci --build-arg GIT_COMMIT=${GITHUB_SHA::7} .
+      - name: Run container
+        run: docker run -d --name api -p 8000:8000 readmission-api:ci
+      - name: Smoke test
+        run: python3 scripts/smoke_test.py http://127.0.0.1:8000 --expect-label synthetic-test
+      - name: Non-root and healthy
+        run: |
+          test "$(docker exec api id -u)" != "0"
+          for i in $(seq 1 30); do
+            [ "$(docker inspect -f '{{.State.Health.Status}}' api)" = healthy ] && exit 0
+            sleep 2
+          done
+          docker inspect -f '{{json .State.Health}}' api; exit 1
+      - name: Container logs
+        if: failure()
+        run: docker logs api
+
+  # Merges to main only: rebuild the real model from code + checksum-verified
+  # data, enforce the promotion gates, and publish the image.
+  release:
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+    needs: container
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      packages: write
+    steps:
+      - uses: actions/checkout@v4
+      - uses: astral-sh/setup-uv@v6
+        with:
+          enable-cache: true
+      - run: uv sync --locked
+      - name: Cache dataset archive (re-verified by checksum on use)
+        uses: actions/cache@v4
+        with:
+          path: data/raw/diabetes_130_us_hospitals.zip
+          key: uci-diabetes-f82ac129da2ddd2299391ff6fbae3a6a58b3edcf59ac9d7bd480c00fe453112a
+      - name: Prepare data
+        run: uv run python -m readmission_mlops.data.prepare
+      - name: Train, track and gate
+        run: uv run python -m readmission_mlops.models.train --require-promotion | tee train.json
+      - name: Export champion
+        run: uv run python -m readmission_mlops.models.export
+      - name: Build image
+        run: |
+          docker build -t "$IMAGE:sha-${GITHUB_SHA::7}" -t "$IMAGE:latest" \
+            --build-arg GIT_COMMIT=${GITHUB_SHA::7} .
+      - name: Smoke test the release image
+        run: |
+          docker run -d --name api -p 8000:8000 "$IMAGE:sha-${GITHUB_SHA::7}"
+          python3 scripts/smoke_test.py http://127.0.0.1:8000 --expect-label v2
+      - name: Push to GitHub Container Registry
+        run: |
+          echo "${{ secrets.GITHUB_TOKEN }}" | docker login ghcr.io -u "${{ github.actor }}" --password-stdin
+          docker push "$IMAGE:sha-${GITHUB_SHA::7}"
+          docker push "$IMAGE:latest"
+      - name: Release summary
+        run: |
+          {
+            echo "### Release image"
+            echo "\`$IMAGE:sha-${GITHUB_SHA::7}\` (also \`latest\`)"
+            echo
+            echo "### Model metadata"
+            echo '```json'
+            cat artifacts/model/metadata.json | python3 -c "import json,sys; m=json.load(sys.stdin); print(json.dumps({k: m[k] for k in ('version_label','train_fingerprint','band_thresholds','metrics')}, indent=2))"
+            echo '```'
+          } >> "$GITHUB_STEP_SUMMARY"
+      - name: Container logs
+        if: failure()
+        run: docker logs api || true

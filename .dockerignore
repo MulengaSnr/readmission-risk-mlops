@@ -1,0 +1,17 @@
+# Only pyproject/uv.lock/README, src/ and the chosen model folder are needed.
+.git
+.github
+.venv
+.ruff_cache
+.pytest_cache
+**/__pycache__
+data
+logs
+mlruns
+mlflow.db
+notebooks
+reports
+tests
+docs
+*.md
+!README.md

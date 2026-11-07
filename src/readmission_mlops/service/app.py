@@ -23,7 +23,7 @@ from collections.abc import AsyncIterator
 from contextlib import asynccontextmanager
 from pathlib import Path
 
-from fastapi import FastAPI, HTTPException, Request
+from fastapi import FastAPI, HTTPException, Request, Response
 
 from readmission_mlops.config import PROJECT_ROOT
 from readmission_mlops.service.model_store import LoadedModel
@@ -93,10 +93,15 @@ def create_app(model_dir: Path | None = None, log_path: Path | None = None) -> F
         return request_id, predictions
 
     @app.get("/health", response_model=Health)
-    def health(request: Request) -> Health:
-        """Liveness and readiness: is a model loaded?"""
+    def health(request: Request, response: Response) -> Health:
+        """Liveness and readiness: 200 with a model loaded, otherwise 503.
+
+        Container and platform health checks use the status code, so a
+        container without a model is reported unhealthy and gets no traffic.
+        """
         model = request.app.state.model
         if model is None:
+            response.status_code = 503
             return Health(status="model not loaded", model_version=None)
         return Health(status="ok", model_version=model.version)
 

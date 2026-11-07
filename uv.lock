@@ -1247,9 +1247,9 @@ wheels = [
 name = "readmission-mlops"
 version = "0.1.0"
 source = { editable = "." }
+default-groups = ["dev", "train"]
 dependencies = [
     { name = "fastapi" },
-    { name = "mlflow" },
     { name = "pyyaml" },
     { name = "readmission-risk" },
     { name = "skops" },
@@ -1263,11 +1263,13 @@ dev = [
     { name = "pytest-cov" },
     { name = "ruff" },
 ]
+train = [
+    { name = "mlflow" },
+]
 
 [package.metadata]
 requires-dist = [
     { name = "fastapi", specifier = ">=0.162.2" },
-    { name = "mlflow", specifier = ">=3.18.0" },
     { name = "pyyaml", specifier = ">=6.0" },
     { name = "readmission-risk", git = "https://github.com/MulengaSnr/readmission-risk-model?rev=v1.0" },
     { name = "skops", specifier = ">=0.16" },
@@ -1281,6 +1283,7 @@ dev = [
     { name = "pytest-cov", specifier = ">=5.0" },
     { name = "ruff", specifier = ">=0.8" },
 ]
+train = [{ name = "mlflow", specifier = ">=3.18.0" }]
 
 [[package]]
 name = "readmission-risk"
