@@ -1,4 +1,4 @@
-.PHONY: setup lint format test check
+.PHONY: setup lint format test check data train export mlflow-ui
 
 setup:   ## Create the virtual environment and install dependencies
 	uv sync
@@ -15,3 +15,15 @@ test:    ## Run the test suite with coverage
 	uv run pytest --cov=src --cov-report=term-missing
 
 check: lint test  ## Everything CI runs
+
+data:    ## Download (SHA-256 verified), clean and split with project 1's code
+	uv run python -m readmission_mlops.data.prepare
+
+train:   ## Train v2, log to MLflow, register; promote to champion if gates pass
+	uv run python -m readmission_mlops.models.train
+
+export:  ## Export the champion model to artifacts/model for the service image
+	uv run python -m readmission_mlops.models.export
+
+mlflow-ui: ## Browse runs and the registry at http://127.0.0.1:5000
+	uv run mlflow ui --backend-store-uri sqlite:///mlflow.db --host 127.0.0.1
