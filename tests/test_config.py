@@ -1,6 +1,6 @@
 import pytest
 
-from project_name.config import load_config
+from readmission_mlops.config import load_config
 
 
 def test_default_config_has_seed():
