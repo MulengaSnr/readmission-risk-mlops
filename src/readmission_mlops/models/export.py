@@ -54,6 +54,7 @@ def export_champion(config: dict[str, Any], root: Path = PROJECT_ROOT) -> Path:
     local = Path(mlflow.artifacts.download_artifacts(f"models:/{name}@{alias}"))
     model = serialization.load(local / "model.skops")
     schema = mlflow.artifacts.load_dict(f"runs:/{version.run_id}/input_schema.json")
+    serving = mlflow.artifacts.load_dict(f"runs:/{version.run_id}/serving_config.json")
 
     dest = root / config["paths"]["model_export"]
     dest.mkdir(parents=True, exist_ok=True)
@@ -64,6 +65,7 @@ def export_champion(config: dict[str, Any], root: Path = PROJECT_ROOT) -> Path:
         "version_label": run.data.tags.get("model_version_label"),
         "run_id": version.run_id,
         "input_fields": schema["input_fields"],
+        **serving,
         "excluded_features": run.data.params.get("excluded_features", "").split(","),
         "train_fingerprint": run.data.tags.get("train_fingerprint"),
         "git_commit": run.data.tags.get("git_commit"),

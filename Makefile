@@ -1,4 +1,4 @@
-.PHONY: setup lint format test check data train export mlflow-ui
+.PHONY: setup lint format test check data train export mlflow-ui serve
 
 setup:   ## Create the virtual environment and install dependencies
 	uv sync
@@ -27,3 +27,6 @@ export:  ## Export the champion model to artifacts/model for the service image
 
 mlflow-ui: ## Browse runs and the registry at http://127.0.0.1:5000
 	uv run mlflow ui --backend-store-uri sqlite:///mlflow.db --host 127.0.0.1
+
+serve:   ## Run the API locally on http://127.0.0.1:8000 (docs at /docs)
+	uv run uvicorn readmission_mlops.service.app:app --host 127.0.0.1 --port 8000

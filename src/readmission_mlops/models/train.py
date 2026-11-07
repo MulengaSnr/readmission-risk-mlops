@@ -36,12 +36,9 @@ from mlflow.models import infer_signature
 from mlflow.tracking import MlflowClient
 from readmission_risk.data.clean import GROUP_COL, TARGET
 from readmission_risk.features.build import add_features, build_preprocessor
-from readmission_risk.models.baselines import (
-    cross_validate_models,
-    grouped_folds,
-    summarise,
-)
+from readmission_risk.models.baselines import grouped_folds, summarise
 from readmission_risk.models.metrics import evaluate
+from readmission_risk.models.sensitivity import cross_validate_oof
 from readmission_risk.models.tuning import make_candidates
 from sklearn.base import clone
 from sklearn.pipeline import Pipeline
@@ -105,6 +102,50 @@ def check_gates(
     return failures
 
 
+# Open-vocabulary inputs: unseen values are accepted with a warning (step 3).
+OPEN_CATEGORIES = (
+    "admission_type",
+    "admission_source",
+    "discharge_disposition",
+    "medical_specialty",
+)
+
+
+def serving_config(
+    oof: np.ndarray,
+    y: np.ndarray,
+    train_df: pd.DataFrame,
+    capacities: list[float] | tuple[float, ...],
+) -> dict[str, Any]:
+    """Settings the service needs, derived from training data only.
+
+    Risk-band cut-offs come from **out-of-fold** predictions: in-sample scores
+    from a boosted model are over-confident and would put the cut-offs too
+    high.
+
+    Args:
+        oof: Out-of-fold predicted probabilities on the training set.
+        y: Training outcomes.
+        train_df: Training encounters.
+        capacities: Review capacities, e.g. ``[0.1, 0.2]``.
+
+    Returns:
+        Band thresholds (score above which an encounter is in the top share),
+        the training readmission rate and the categories seen per open field.
+    """
+    return {
+        "band_thresholds": {
+            f"top_{round(c * 100)}pct": float(np.quantile(oof, 1 - c))
+            for c in sorted(capacities)
+        },
+        "training_readmission_rate": float(np.mean(y)),
+        "known_categories": {
+            col: sorted(train_df[col].dropna().astype(str).unique().tolist())
+            for col in OPEN_CATEGORIES
+        },
+    }
+
+
 def resolve_tracking_uri(uri: str, root: Path) -> str:
     """Make a relative ``sqlite:///`` URI absolute under ``root``."""
     prefix = "sqlite:///"
@@ -156,8 +197,9 @@ def train(config: dict[str, Any], root: Path = PROJECT_ROOT) -> dict[str, Any]:
     folds = grouped_folds(
         y_train, train_df[GROUP_COL], config["cv"]["n_splits"], config["seed"]
     )
-    cv = cross_validate_models(x_train, y_train, folds, {"v2": model}, capacities)
+    cv, oof = cross_validate_oof(x_train, y_train, folds, {"v2": model}, capacities)
     cv_summary = summarise(cv).loc["v2"]
+    serving = serving_config(oof["v2"], y_train, train_df, capacities)
     model.fit(x_train, y_train)
     prob = model.predict_proba(x_test)[:, 1]
     test_metrics = evaluate(y_test, prob, capacities)
@@ -200,6 +242,7 @@ def train(config: dict[str, Any], root: Path = PROJECT_ROOT) -> dict[str, Any]:
         mlflow.log_metrics({f"test_{k}": v for k, v in test_metrics.items()})
         mlflow.log_text(cv.to_csv(index=False), "cv_folds.csv")
         mlflow.log_dict({"input_fields": columns}, "input_schema.json")
+        mlflow.log_dict(serving, "serving_config.json")
         example = x_train.head(5)
         info = mlflow.sklearn.log_model(
             model,

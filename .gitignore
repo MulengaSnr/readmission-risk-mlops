@@ -48,3 +48,6 @@ Thumbs.db
 # --- MLflow and exported models ---
 mlflow.db
 artifacts/
+
+# --- Local prediction logs ---
+logs/

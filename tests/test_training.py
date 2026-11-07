@@ -106,6 +106,9 @@ def test_train_register_promote_export(tmp_path, monkeypatch):
     meta = json.loads((dest / "metadata.json").read_text())
     assert meta["version_label"] == "v2"
     assert meta["excluded_features"] == ["payer_code"]
+    bands = meta["band_thresholds"]
+    assert 0 < bands["top_20pct"] <= bands["top_10pct"] < 1
+    assert "Emergency" in meta["known_categories"]["admission_type"]
     model = serialization.load(dest / "model.skops")
     test = pd.read_parquet(processed / "test.parquet")
     prob = model.predict_proba(test[meta["input_fields"]])[:, 1]
