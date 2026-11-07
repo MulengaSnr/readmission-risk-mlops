@@ -1,54 +1,45 @@
-# ds-project-template
+# Readmission Risk Model in Production
 
-The starter repository behind every project in [my data science portfolio](https://mulengasnr.github.io). It sets the shared structure, quality checks and documentation standard.
+Taking a validated healthcare model from a laptop to a versioned, tested, monitored service: MLflow, FastAPI, Docker, GitHub Actions and Azure.
 
-**Problem:** portfolio projects often look different from each other, skip tests and overstate results. This template makes reproducibility, testing and honest documentation the default from the first commit.
+![CI](https://github.com/MulengaSnr/readmission-risk-mlops/actions/workflows/ci.yml/badge.svg)
+![Python](https://img.shields.io/badge/python-3.12-blue)
+![Licence](https://img.shields.io/badge/licence-MIT-green)
 
-## What you get
-| Area | Included |
-|---|---|
-| Environment | `uv` + Python 3.12 pinned (`.python-version`, `uv.lock`) |
-| Code quality | `ruff` lint + format (PEP 8, imports, Google-style docstrings, bugbear) |
-| Testing | `pytest` + coverage, example tests for the config loader |
-| CI | GitHub Actions: lint and test on every push and pull request |
-| Config | YAML config in `configs/`, so no hard-coded paths or seeds |
-| Secrets | `.env.example` only; `.env`, keys and data folders are gitignored |
-| Docs | [README skeleton](docs/README_TEMPLATE.md), [documentation standard](docs/README_STANDARD.md), [model card](docs/MODEL_CARD.md), [project checklist](docs/PROJECT_CHECKLIST.md), [data provenance](data/README.md) |
-| Collaboration | Issue template and pull-request checklist (including data-governance checks) |
+**Status:** In development, step 1 of 7 (scaffold and design). Nothing is deployed yet, and no results are claimed.
 
-## Use it
+## The problem
+[`readmission-risk-model`](https://github.com/MulengaSnr/readmission-risk-model) built a calibrated, explained and fairness-audited model that predicts 30-day readmission for patients with diabetes. A model on a laptop helps no one. A care team needs a service that scores a discharge on request, explains the score, can be traced to the exact model that produced it, and warns when something drifts. This project shows the difference between **developing** a model and **operating** one.
+
+## Planned architecture
+```
+ train ──► MLflow (tracking + registry) ──► FastAPI service in Docker ──► Azure Container Apps
+                                               │ prediction log
+                                               ▼
+                                    monitoring: drift, calibration, recall by group
+```
+Full design, decisions and alert thresholds: [docs/DESIGN.md](docs/DESIGN.md).
+
+## Data and governance
+- Public, de-identified UCI Diabetes 130-US Hospitals data (CC BY 4.0). No real or personal data is used. Production traffic is simulated by replaying held-out records.
+- Data preparation reuses project 1's code, installed as a library pinned to its [`v1.0` release](https://github.com/MulengaSnr/readmission-risk-model/releases/tag/v1.0).
+
+## Run it
 ```bash
-gh repo create MulengaSnr/<new-repo> --template MulengaSnr/ds-project-template --private --clone
-cd <new-repo>
-mv src/project_name src/<package_name>        # then update pyproject.toml + imports
-cp docs/README_TEMPLATE.md README.md
-uv sync
-make check                                     # lint + tests
+git clone https://github.com/MulengaSnr/readmission-risk-mlops.git
+cd readmission-risk-mlops
+uv sync          # Python 3.12 + dependencies, including project 1 at v1.0
+make check       # lint + tests
 ```
 
-## Commands
-| Command | Does |
-|---|---|
-| `make setup` | Create `.venv` and install dependencies |
-| `make lint` | Ruff checks + format check |
-| `make format` | Auto-fix formatting |
-| `make test` | Tests with coverage |
-| `make check` | Everything CI runs |
+## Progress
+- [x] 1. Scaffold, project 1 dependency, design
+- [ ] 2. Training pipeline with MLflow tracking and registry
+- [ ] 3. FastAPI service with validation, explanations and tests
+- [ ] 4. Docker image and container smoke test in CI
+- [ ] 5. Monitoring and replay simulation
+- [ ] 6. Azure deployment (free tier)
+- [ ] 7. README, model card and runbook
 
-## Structure
-```
-├── app/            optional UI / API
-├── configs/        YAML parameters
-├── data/           raw · external · processed (gitignored) + provenance README
-├── docs/           standards, model card, checklist, README skeleton
-├── notebooks/      narrative analysis (logic lives in src/)
-├── reports/        findings.md + figures/
-├── src/project_name/{data,features,models,visualisation}
-└── tests/
-```
-
-![Template checks passing](docs/check-output.png)
-
-## Next steps
-- Add optional add-ons (Dockerfile, MLflow config) when the MLOps project needs them
-- Add a pre-commit hook once the workflow is settled
+## Author
+**Enock Mulenga**, Data Scientist · [LinkedIn](https://www.linkedin.com/in/enock-mulenga-8472ba137) · [Portfolio](https://mulengasnr.github.io)
