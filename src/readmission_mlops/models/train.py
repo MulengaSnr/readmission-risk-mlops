@@ -48,6 +48,7 @@ from readmission_mlops.config import PROJECT_ROOT, load_config
 from readmission_mlops.data.prepare import data_fingerprint
 from readmission_mlops.features.schema import serving_columns
 from readmission_mlops.models.serialization import TRUSTED_TYPES
+from readmission_mlops.monitoring.profile import build_reference
 
 logger = logging.getLogger(__name__)
 
@@ -200,6 +201,9 @@ def train(config: dict[str, Any], root: Path = PROJECT_ROOT) -> dict[str, Any]:
     cv, oof = cross_validate_oof(x_train, y_train, folds, {"v2": model}, capacities)
     cv_summary = summarise(cv).loc["v2"]
     serving = serving_config(oof["v2"], y_train, train_df, capacities)
+    reference = build_reference(
+        x_train, oof["v2"], y_train, serving["band_thresholds"]["top_20pct"]
+    )
     model.fit(x_train, y_train)
     prob = model.predict_proba(x_test)[:, 1]
     test_metrics = evaluate(y_test, prob, capacities)
@@ -243,6 +247,7 @@ def train(config: dict[str, Any], root: Path = PROJECT_ROOT) -> dict[str, Any]:
         mlflow.log_text(cv.to_csv(index=False), "cv_folds.csv")
         mlflow.log_dict({"input_fields": columns}, "input_schema.json")
         mlflow.log_dict(serving, "serving_config.json")
+        mlflow.log_dict(reference, "monitoring_reference.json")
         example = x_train.head(5)
         info = mlflow.sklearn.log_model(
             model,

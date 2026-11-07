@@ -52,3 +52,13 @@ promotion:
   # v1.0 test PR-AUC was 0.2345 (project 1 reports/metrics/test_metrics.csv).
   reference_test_pr_auc: 0.2345
   max_test_pr_auc_drop: 0.01
+
+monitoring:
+  # Thresholds fixed in docs/DESIGN.md section 7 before any data was seen.
+  psi: {warn: 0.10, alert: 0.25}
+  calibration_pts: {warn: 3, alert: 5}
+  recall_drop_pts: {warn: 3, alert: 5}
+  gap_80_pts: {warn: 7, alert: 10}
+  missing_increase_pts: {warn: 5, alert: 10}
+  # Calibration, recall and fairness need more outcomes than one month gives.
+  performance_window_months: 3

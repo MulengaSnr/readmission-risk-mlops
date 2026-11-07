@@ -55,6 +55,9 @@ def export_champion(config: dict[str, Any], root: Path = PROJECT_ROOT) -> Path:
     model = serialization.load(local / "model.skops")
     schema = mlflow.artifacts.load_dict(f"runs:/{version.run_id}/input_schema.json")
     serving = mlflow.artifacts.load_dict(f"runs:/{version.run_id}/serving_config.json")
+    reference = mlflow.artifacts.load_dict(
+        f"runs:/{version.run_id}/monitoring_reference.json"
+    )
 
     dest = root / config["paths"]["model_export"]
     dest.mkdir(parents=True, exist_ok=True)
@@ -77,6 +80,7 @@ def export_champion(config: dict[str, Any], root: Path = PROJECT_ROOT) -> Path:
         },
     }
     (dest / "metadata.json").write_text(json.dumps(metadata, indent=2) + "\n")
+    (dest / "reference.json").write_text(json.dumps(reference, indent=2) + "\n")
     return dest
 
 

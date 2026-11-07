@@ -51,3 +51,6 @@ artifacts/
 
 # --- Local prediction logs ---
 logs/
+
+# --- Replay outputs too large or too detailed to commit ---
+reports/monitoring/outcomes.jsonl
