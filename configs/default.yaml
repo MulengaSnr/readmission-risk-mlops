@@ -1,6 +1,54 @@
 # Central configuration: paths, random seed and parameters live here, not in code.
 seed: 42
+
 paths:
   raw: data/raw
   processed: data/processed
-  figures: reports/figures
+  reports: reports
+  model_export: artifacts/model   # champion model exported here for the image
+
+dataset:
+  # Identical to project 1 (readmission-risk-model configs/default.yaml).
+  name: Diabetes 130-US Hospitals for Years 1999-2008
+  url: https://archive.ics.uci.edu/static/public/296/diabetes+130-us+hospitals+for+years+1999-2008.zip
+  sha256: f82ac129da2ddd2299391ff6fbae3a6a58b3edcf59ac9d7bd480c00fe453112a
+  archive_name: diabetes_130_us_hospitals.zip
+  members:
+    - diabetic_data.csv
+    - IDS_mapping.csv
+
+split:
+  test_size: 0.2      # same as project 1, so the same seed gives the same split
+
+cv:
+  n_splits: 5
+
+evaluation:
+  capacities: [0.1, 0.2]
+
+model:
+  name: readmission-risk
+  version_label: v2
+  # Leave out payer: decided in project 1 (PR #12, issue #13).
+  exclude_features: [payer_code]
+  # Tuned in project 1 (reports/metrics/best_params.json at tag v1.0).
+  xgboost_params:
+    colsample_bytree: 0.9162213204002109
+    learning_rate: 0.018891200276189388
+    max_depth: 5
+    min_child_weight: 2.0492680115417348
+    n_estimators: 659
+    reg_lambda: 1.672269700618368
+    subsample: 0.6028265220878869
+
+mlflow:
+  tracking_uri: sqlite:///mlflow.db   # relative to the project root
+  experiment: readmission-risk-v2
+  champion_alias: champion
+
+promotion:
+  # A trained model becomes "champion" only if it passes these gates.
+  min_cv_pr_auc: 0.20            # well above the no-skill 0.114
+  # v1.0 test PR-AUC was 0.2345 (project 1 reports/metrics/test_metrics.csv).
+  reference_test_pr_auc: 0.2345
+  max_test_pr_auc_drop: 0.01

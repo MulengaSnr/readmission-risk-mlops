@@ -44,3 +44,7 @@ build/
 .idea/
 .DS_Store
 Thumbs.db
+
+# --- MLflow and exported models ---
+mlflow.db
+artifacts/

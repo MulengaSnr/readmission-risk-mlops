@@ -58,6 +58,7 @@ This project shows the difference between **developing** a model and **operating
 | D8 | OIDC federation from GitHub Actions to Azure | No long-lived cloud secrets stored in GitHub | A service-principal secret in repository secrets |
 | D9 | Hand-written drift metrics (PSI, calibration by decile, recall by group) | Small, tested, explainable in an interview; no heavy dependency | Evidently or WhyLogs (useful, but hide the mechanics) |
 | D10 | Monitoring as a batch job writing a report | Matches how outcomes arrive (30 days later); cheap | A real-time metrics stack (Prometheus and Grafana), out of proportion here |
+| D11 | Models saved with skops, loaded with an allow-list held **in our code** (added in step 2) | Unpickling can run arbitrary code. MLflow's own loader reads the trusted types from the model's metadata, which a tampered file could edit, so the export and the service load with `serialization.TRUSTED_TYPES` instead | Pickle or joblib (unsafe); `MLFLOW_ALLOW_MODEL_CODE_EXECUTION=true` (switches the safety check off) |
 
 ## 7. Monitoring thresholds (initial)
 Thresholds are fixed now and revisited only with evidence:
