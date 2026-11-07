@@ -6,7 +6,7 @@ Taking a validated healthcare model from a laptop to a versioned, tested, monito
 ![Python](https://img.shields.io/badge/python-3.12-blue)
 ![Licence](https://img.shields.io/badge/licence-MIT-green)
 
-**Status:** In development, step 4 of 7 (container image and CI/CD). Not deployed to the cloud yet.
+**Status:** In development, step 5 of 7 (monitoring). Not deployed to the cloud yet.
 
 ## The problem
 [`readmission-risk-model`](https://github.com/MulengaSnr/readmission-risk-model) built a calibrated, explained and fairness-audited model that predicts 30-day readmission for patients with diabetes. A model on a laptop helps no one. A care team needs a service that scores a discharge on request, explains the score, can be traced to the exact model that produced it, and warns when something drifts. This project shows the difference between **developing** a model and **operating** one.
@@ -73,6 +73,25 @@ Example response for an 80–90-year-old with 4 inpatient stays in the previous 
 
 Training is deterministic, so CI rebuilds exactly the model validated locally from code and data, and every image can be traced to a commit, a data checksum and passed promotion checks. Images from this private repo are private in the registry.
 
+## Monitoring
+Every prediction is logged. A monitoring job joins the log with outcomes (which arrive 30 days later) and compares each month with a **reference profile** saved with the model: out-of-fold score distribution, input distributions, missing rates and recall at the fixed top-20% cut-off. Checks are graded OK / WARN / ALERT against thresholds fixed in [DESIGN.md](docs/DESIGN.md#7-monitoring-thresholds-initial) before any data was seen.
+
+**Simulation** (`make replay`, then `make monitor`): six months through the real API. Months 1–4 are the held-out test set in four parts; month 5 is a **population shift** (older patients with more prior stays); month 6 is a **pipeline bug** (discharge destination arrives empty).
+
+![Drift by month](reports/monitoring/drift.png)
+
+| Month | Scenario | Status | Score PSI | Worst input PSI | Missing ↑ (pts) | Calibration (pts) | Recall drop (pts) | Age 80+ gap (pts) |
+|---|---|---|---:|---:|---:|---:|---:|---:|
+| 1–2 | normal | OK | ≤ 0.005 | ≤ 0.003 | ≤ 0.12 | n/a | n/a | n/a |
+| 3 | normal | OK | 0.002 | 0.003 | 0.79 | 1.88 | 2.08 | 2.78 |
+| 4 | normal | OK | 0.001 | 0.004 | 0.32 | 1.26 | 0.49 | 1.00 |
+| 5 | population shift | **ALERT** | 0.15 WARN | **0.39 ALERT** (age) | 0.00 | 1.65 | −5.71 | −0.95 |
+| 6 | pipeline bug | **ALERT** | **0.49 ALERT** | **10.5 ALERT** (discharge) | **95.3 ALERT** (discharge) | 1.77 | −6.26 | 2.02 |
+
+- **Both problems are caught, and each alert names its cause:** age for the population shift; discharge destination for the pipeline bug, flagged by drift *and* missing values.
+- **Drift is not the same as degradation.** In month 5 the inputs shifted but calibration held (1.65 pts) and recall rose. The model still gives accurate risks for an older population, so the right response is to investigate, not to retrain automatically.
+- **Calibration, recall and fairness use a rolling 3-month window** (decision D12), because one month of outcomes is too noisy. **The first replay graded the window before it was full, and normal months 1–2 raised false warnings.** Those checks now report `n/a` until three months are available (D13). Thresholds were not changed. Full report: [reports/monitoring/report.md](reports/monitoring/report.md).
+
 ## Data and governance
 - Public, de-identified UCI Diabetes 130-US Hospitals data (CC BY 4.0). No real or personal data is used. Production traffic is simulated by replaying held-out records.
 - Data preparation reuses project 1's code, installed as a library pinned to its [`v1.0` release](https://github.com/MulengaSnr/readmission-risk-model/releases/tag/v1.0).
@@ -88,6 +107,8 @@ make export      # champion model -> artifacts/model/
 make serve       # API on http://127.0.0.1:8000 (docs at /docs)
 make image       # build the Docker image around artifacts/model
 make smoke       # run the image and smoke-test it
+make replay      # simulate six months of traffic through the API
+make monitor     # monitoring report: drift, missing values, calibration, recall, fairness
 make check       # lint + tests
 ```
 
@@ -96,7 +117,7 @@ make check       # lint + tests
 - [x] 2. Training pipeline with MLflow tracking and registry
 - [x] 3. FastAPI service with validation, explanations and tests
 - [x] 4. Docker image and container smoke test in CI
-- [ ] 5. Monitoring and replay simulation
+- [x] 5. Monitoring and replay simulation
 - [ ] 6. Azure deployment (free tier)
 - [ ] 7. README, model card and runbook
 

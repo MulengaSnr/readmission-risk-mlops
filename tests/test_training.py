@@ -109,6 +109,8 @@ def test_train_register_promote_export(tmp_path, monkeypatch):
     bands = meta["band_thresholds"]
     assert 0 < bands["top_20pct"] <= bands["top_10pct"] < 1
     assert "Emergency" in meta["known_categories"]["admission_type"]
+    reference = json.loads((dest / "reference.json").read_text())
+    assert {"score", "features", "missing", "performance"} <= set(reference)
     model = serialization.load(dest / "model.skops")
     test = pd.read_parquet(processed / "test.parquet")
     prob = model.predict_proba(test[meta["input_fields"]])[:, 1]

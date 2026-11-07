@@ -1,0 +1,272 @@
+[
+  {
+    "month": 1,
+    "scenario": "normal",
+    "encounters": 4967,
+    "window_encounters": 4967,
+    "status": "OK",
+    "checks": [
+      {
+        "check": "Score drift (PSI)",
+        "value": 0.004948484365988036,
+        "status": "OK",
+        "detail": ""
+      },
+      {
+        "check": "Input drift, worst feature (PSI)",
+        "value": 0.0029829652774310675,
+        "status": "OK",
+        "detail": "num_lab_procedures"
+      },
+      {
+        "check": "Missing values, largest increase (pts)",
+        "value": 0.1214131066050117,
+        "status": "OK",
+        "detail": "medical_specialty"
+      },
+      {
+        "check": "Calibration, worst decile (pts)",
+        "value": NaN,
+        "status": "N/A",
+        "detail": "window filling: 1 of 3 months"
+      },
+      {
+        "check": "Recall at 20% cut-off, drop vs training (pts)",
+        "value": NaN,
+        "status": "N/A",
+        "detail": "window filling: 1 of 3 months"
+      },
+      {
+        "check": "Recall gap, ages 80+ vs 60-79 (pts)",
+        "value": NaN,
+        "status": "N/A",
+        "detail": "window filling: 1 of 3 months"
+      }
+    ]
+  },
+  {
+    "month": 2,
+    "scenario": "normal",
+    "encounters": 4967,
+    "window_encounters": 9934,
+    "status": "OK",
+    "checks": [
+      {
+        "check": "Score drift (PSI)",
+        "value": 0.00197319518667171,
+        "status": "OK",
+        "detail": ""
+      },
+      {
+        "check": "Input drift, worst feature (PSI)",
+        "value": 0.0029067046951574897,
+        "status": "OK",
+        "detail": "age"
+      },
+      {
+        "check": "Missing values, largest increase (pts)",
+        "value": 0.05790003942089915,
+        "status": "OK",
+        "detail": "diag_3"
+      },
+      {
+        "check": "Calibration, worst decile (pts)",
+        "value": NaN,
+        "status": "N/A",
+        "detail": "window filling: 2 of 3 months"
+      },
+      {
+        "check": "Recall at 20% cut-off, drop vs training (pts)",
+        "value": NaN,
+        "status": "N/A",
+        "detail": "window filling: 2 of 3 months"
+      },
+      {
+        "check": "Recall gap, ages 80+ vs 60-79 (pts)",
+        "value": NaN,
+        "status": "N/A",
+        "detail": "window filling: 2 of 3 months"
+      }
+    ]
+  },
+  {
+    "month": 3,
+    "scenario": "normal",
+    "encounters": 4967,
+    "window_encounters": 14901,
+    "status": "OK",
+    "checks": [
+      {
+        "check": "Score drift (PSI)",
+        "value": 0.0018948762521528708,
+        "status": "OK",
+        "detail": ""
+      },
+      {
+        "check": "Input drift, worst feature (PSI)",
+        "value": 0.002954819868042284,
+        "status": "OK",
+        "detail": "discharge_disposition"
+      },
+      {
+        "check": "Missing values, largest increase (pts)",
+        "value": 0.7857980472130266,
+        "status": "OK",
+        "detail": "medical_specialty"
+      },
+      {
+        "check": "Calibration, worst decile (pts)",
+        "value": 1.8848118279569892,
+        "status": "OK",
+        "detail": ""
+      },
+      {
+        "check": "Recall at 20% cut-off, drop vs training (pts)",
+        "value": 2.0847809097348904,
+        "status": "OK",
+        "detail": "recall 36.9% vs 39.0%"
+      },
+      {
+        "check": "Recall gap, ages 80+ vs 60-79 (pts)",
+        "value": 2.780931643207091,
+        "status": "OK",
+        "detail": "33.5% vs 36.3%"
+      }
+    ]
+  },
+  {
+    "month": 4,
+    "scenario": "normal",
+    "encounters": 4966,
+    "window_encounters": 14900,
+    "status": "OK",
+    "checks": [
+      {
+        "check": "Score drift (PSI)",
+        "value": 0.0010917906631765395,
+        "status": "OK",
+        "detail": ""
+      },
+      {
+        "check": "Input drift, worst feature (PSI)",
+        "value": 0.004237458723994216,
+        "status": "OK",
+        "detail": "num_lab_procedures"
+      },
+      {
+        "check": "Missing values, largest increase (pts)",
+        "value": 0.3224229949062504,
+        "status": "OK",
+        "detail": "admission_source"
+      },
+      {
+        "check": "Calibration, worst decile (pts)",
+        "value": 1.256161073825504,
+        "status": "OK",
+        "detail": ""
+      },
+      {
+        "check": "Recall at 20% cut-off, drop vs training (pts)",
+        "value": 0.48539448009397024,
+        "status": "OK",
+        "detail": "recall 38.5% vs 39.0%"
+      },
+      {
+        "check": "Recall gap, ages 80+ vs 60-79 (pts)",
+        "value": 0.9981442205726387,
+        "status": "OK",
+        "detail": "36.7% vs 37.7%"
+      }
+    ]
+  },
+  {
+    "month": 5,
+    "scenario": "population shift (older, more prior stays)",
+    "encounters": 5000,
+    "window_encounters": 14933,
+    "status": "ALERT",
+    "checks": [
+      {
+        "check": "Score drift (PSI)",
+        "value": 0.14818373406264232,
+        "status": "WARN",
+        "detail": ""
+      },
+      {
+        "check": "Input drift, worst feature (PSI)",
+        "value": 0.3853930479177603,
+        "status": "ALERT",
+        "detail": "age"
+      },
+      {
+        "check": "Missing values, largest increase (pts)",
+        "value": 0.002383954298944296,
+        "status": "OK",
+        "detail": "diag_1"
+      },
+      {
+        "check": "Calibration, worst decile (pts)",
+        "value": 1.6548324396782832,
+        "status": "OK",
+        "detail": ""
+      },
+      {
+        "check": "Recall at 20% cut-off, drop vs training (pts)",
+        "value": -5.70872394873737,
+        "status": "OK",
+        "detail": "recall 44.7% vs 39.0%"
+      },
+      {
+        "check": "Recall gap, ages 80+ vs 60-79 (pts)",
+        "value": -0.9511322328629557,
+        "status": "OK",
+        "detail": "44.2% vs 43.3%"
+      }
+    ]
+  },
+  {
+    "month": 6,
+    "scenario": "pipeline bug (discharge destination missing)",
+    "encounters": 5000,
+    "window_encounters": 14966,
+    "status": "ALERT",
+    "checks": [
+      {
+        "check": "Score drift (PSI)",
+        "value": 0.4917257131359416,
+        "status": "ALERT",
+        "detail": ""
+      },
+      {
+        "check": "Input drift, worst feature (PSI)",
+        "value": 10.49827151966518,
+        "status": "ALERT",
+        "detail": "discharge_disposition"
+      },
+      {
+        "check": "Missing values, largest increase (pts)",
+        "value": 95.28141633007436,
+        "status": "ALERT",
+        "detail": "discharge_disposition"
+      },
+      {
+        "check": "Calibration, worst decile (pts)",
+        "value": 1.7700066889632105,
+        "status": "OK",
+        "detail": ""
+      },
+      {
+        "check": "Recall at 20% cut-off, drop vs training (pts)",
+        "value": -6.262861007129622,
+        "status": "OK",
+        "detail": "recall 45.2% vs 39.0%"
+      },
+      {
+        "check": "Recall gap, ages 80+ vs 60-79 (pts)",
+        "value": 2.020381036774477,
+        "status": "OK",
+        "detail": "43.1% vs 45.1%"
+      }
+    ]
+  }
+]

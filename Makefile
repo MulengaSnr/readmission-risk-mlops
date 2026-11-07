@@ -1,4 +1,4 @@
-.PHONY: setup lint format test check data train export mlflow-ui serve image smoke
+.PHONY: setup lint format test check data train export mlflow-ui serve image smoke replay monitor
 
 setup:   ## Create the virtual environment and install dependencies
 	uv sync
@@ -39,3 +39,9 @@ smoke:   ## Run the image and smoke-test it, then stop it
 	docker run -d --name readmission-api -p 8000:8000 readmission-api:local
 	uv run python scripts/smoke_test.py http://127.0.0.1:8000; status=$$?; \
 	docker rm -f readmission-api >/dev/null; exit $$status
+
+replay:  ## Simulate six months of traffic through the API (in-process)
+	uv run python -m readmission_mlops.monitoring.replay
+
+monitor: ## Monthly monitoring report from the prediction log and outcomes
+	uv run python -m readmission_mlops.monitoring.report

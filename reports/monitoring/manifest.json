@@ -1,0 +1,74 @@
+[
+  {
+    "month": 1,
+    "scenario": "normal",
+    "encounters": 4967,
+    "request_ids": [
+      "95bb1d28-042a-43f3-9232-ac05e3240f8e",
+      "0fa9e9b3-9504-4b04-bb04-90757ff39d5c",
+      "f8fa4381-02e8-4f15-b47e-bd79895bf386",
+      "3c9bd4a7-3868-4993-8681-fa5424263cdf",
+      "d5e5348f-86bf-436d-8e07-9fab72b2509e"
+    ]
+  },
+  {
+    "month": 2,
+    "scenario": "normal",
+    "encounters": 4967,
+    "request_ids": [
+      "81afebc1-3e43-4731-a036-c521f4dcc080",
+      "837bf7d9-60b1-45e6-b2cc-53c6238c27d9",
+      "d7c75c6a-70e5-4c4c-878e-a38fa11ccda7",
+      "ad431b7c-d27d-4ba1-b186-d97da6d81d3d",
+      "0a375705-6a11-409a-a5b4-4d0ff1dd422b"
+    ]
+  },
+  {
+    "month": 3,
+    "scenario": "normal",
+    "encounters": 4967,
+    "request_ids": [
+      "14675477-14b0-4d55-bea4-18e61961938f",
+      "cefb3296-cfd7-48bc-b05f-0688306ef780",
+      "8d08f637-7100-4c3e-bfc2-3e68a22abf9c",
+      "30d87a22-ef07-49a8-bd58-3e4d5436dd9f",
+      "1ea3c0f6-4125-4381-865e-42f3dbac6c70"
+    ]
+  },
+  {
+    "month": 4,
+    "scenario": "normal",
+    "encounters": 4966,
+    "request_ids": [
+      "49955141-41dd-43b5-bdf1-620038841d0a",
+      "88b0147a-9279-408e-834a-276cf5f6ba27",
+      "551792c7-587c-478a-aefc-63b1035962fb",
+      "4e59d386-7d25-4771-8605-e1c599c91920",
+      "df4042ff-0c9d-4635-aaeb-150f6f20a413"
+    ]
+  },
+  {
+    "month": 5,
+    "scenario": "population shift (older, more prior stays)",
+    "encounters": 5000,
+    "request_ids": [
+      "eef79869-6690-4062-ba4b-9e8db9771623",
+      "238364e4-7367-48fe-8896-db8828e66f2c",
+      "9abe1531-e737-4a27-b686-cc340a8b4c64",
+      "a8b88739-0cac-45b5-afd2-7b176a0eece5",
+      "a1a02ec4-e4ee-462f-876e-729748b571d6"
+    ]
+  },
+  {
+    "month": 6,
+    "scenario": "pipeline bug (discharge destination missing)",
+    "encounters": 5000,
+    "request_ids": [
+      "f0bc143f-13a1-4e14-80ec-9972ec91d19a",
+      "66a1ab6b-2a33-4611-a96b-3e0a2b899c8f",
+      "1971151c-b3cc-4746-8d35-c39b262cfb12",
+      "3e58ba26-39bf-4a33-9146-23006fc92f3d",
+      "5cd96187-ffa0-491e-9ebf-6d570d8a19f5"
+    ]
+  }
+]
