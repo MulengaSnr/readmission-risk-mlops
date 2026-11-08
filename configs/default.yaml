@@ -25,6 +25,7 @@ cv:
 
 evaluation:
   capacities: [0.1, 0.2]
+  n_bootstrap: 1000     # same as project 1's audit
 
 model:
   name: readmission-risk

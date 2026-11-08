@@ -148,3 +148,30 @@ def test_ensure_archive_reuses_only_a_verified_file(tmp_path, monkeypatch):
     archive.write_bytes(b"tampered")
     prepare.ensure_archive("http://x", archive, good)
     assert calls == ["http://x"]  # checksum failed: downloaded again
+
+
+def test_audit_reports_every_group() -> None:
+    """The fairness audit runs on a fitted model and covers each group."""
+    from readmission_mlops.models.audit import audit
+
+    class Model:
+        """Scores encounters by their first feature."""
+
+        def predict_proba(self, x: pd.DataFrame) -> np.ndarray:
+            p = x["score"].to_numpy()
+            return np.column_stack([1 - p, p])
+
+    n = 200
+    df = pd.DataFrame(
+        {
+            "score": np.linspace(0.01, 0.99, n),
+            "readmitted_30d": [int(i % 4 == 0) for i in range(n)],
+            "patient_nbr": range(n),
+            "gender": ["Male", "Female"] * (n // 2),
+            "age": ["[80-90)", "[60-70)"] * (n // 2),
+            "race": ["Caucasian"] * n,
+        }
+    )
+    table = audit(Model(), df, ["score"], n_boot=5, seed=1)
+    assert {"80+", "60-79", "Male", "Female", "Caucasian"} <= set(table["group"])
+    assert (table["metric"] == "recall").any()
