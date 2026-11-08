@@ -113,3 +113,35 @@ jobs:
       - name: Container logs
         if: failure()
         run: docker logs api || true
+
+  # Merges to main only: roll the released image out to Azure and smoke-test
+  # the live URL. Logs in with OIDC, so no cloud credential is stored in GitHub.
+  deploy:
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+    needs: release
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      id-token: write
+    env:
+      AZURE_RG: rg-readmission-mlops
+      AZURE_APP: ca-readmission-api
+    steps:
+      - uses: actions/checkout@v4
+      - name: Log in to Azure
+        uses: azure/login@v2
+        with:
+          client-id: ${{ vars.AZURE_CLIENT_ID }}
+          tenant-id: ${{ vars.AZURE_TENANT_ID }}
+          subscription-id: ${{ vars.AZURE_SUBSCRIPTION_ID }}
+      - name: Deploy the release image
+        run: |
+          az config set extension.use_dynamic_install=yes_without_prompt
+          az containerapp update -n "$AZURE_APP" -g "$AZURE_RG" \
+            --image "$IMAGE:sha-${GITHUB_SHA::7}" --only-show-errors -o none
+      - name: Smoke test the live service
+        run: |
+          FQDN=$(az containerapp show -n "$AZURE_APP" -g "$AZURE_RG" \
+            --query properties.configuration.ingress.fqdn -o tsv)
+          python3 scripts/smoke_test.py "https://$FQDN" --expect-label v2 --wait 240
+          echo "### Deployed to https://$FQDN" >> "$GITHUB_STEP_SUMMARY"
