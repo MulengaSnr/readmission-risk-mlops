@@ -46,7 +46,7 @@ def wait_healthy(base: str, timeout: float = 60) -> None:
         try:
             if call(f"{base}/health")[0] == 200:
                 return
-        except (urllib.error.URLError, ConnectionError):
+        except OSError:  # refused, reset or timed out (e.g. a cold start)
             pass
         time.sleep(1)
     raise SystemExit(f"FAIL: {base}/health not healthy after {timeout}s")
@@ -57,10 +57,13 @@ def main() -> None:
     parser = argparse.ArgumentParser(description=__doc__.splitlines()[0])
     parser.add_argument("base_url")
     parser.add_argument("--expect-label", help="required model version_label")
+    parser.add_argument(
+        "--wait", type=float, default=60, help="seconds to wait for /health"
+    )
     args = parser.parse_args()
     base = args.base_url.rstrip("/")
 
-    wait_healthy(base)
+    wait_healthy(base, timeout=args.wait)
     checks = []
     status, info = call(f"{base}/model-info")
     checks.append(("model-info returns 200", status == 200))

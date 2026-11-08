@@ -6,7 +6,9 @@ Taking a validated healthcare model from a laptop to a versioned, tested, monito
 ![Python](https://img.shields.io/badge/python-3.12-blue)
 ![Licence](https://img.shields.io/badge/licence-MIT-green)
 
-**Status:** In development, step 5 of 7 (monitoring). Not deployed to the cloud yet.
+**Status:** In development, step 6 of 7. Deployed to Azure Container Apps.
+
+**Live demo:** [interactive API docs](https://ca-readmission-api.purplemushroom-33c1d15b.francecentral.azurecontainerapps.io/docs). The app scales to zero when idle, so the first request can be slow. It is a portfolio demo trained on public data and is not for clinical use.
 
 ## The problem
 [`readmission-risk-model`](https://github.com/MulengaSnr/readmission-risk-model) built a calibrated, explained and fairness-audited model that predicts 30-day readmission for patients with diabetes. A model on a laptop helps no one. A care team needs a service that scores a discharge on request, explains the score, can be traced to the exact model that produced it, and warns when something drifts. This project shows the difference between **developing** a model and **operating** one.
@@ -118,7 +120,7 @@ make check       # lint + tests
 - [x] 3. FastAPI service with validation, explanations and tests
 - [x] 4. Docker image and container smoke test in CI
 - [x] 5. Monitoring and replay simulation
-- [ ] 6. Azure deployment (free tier)
+- [x] 6. Azure deployment (free tier)
 - [ ] 7. README, model card and runbook
 
 ## Author
