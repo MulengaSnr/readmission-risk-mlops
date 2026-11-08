@@ -1,4 +1,4 @@
-.PHONY: setup lint format test check data train export mlflow-ui serve image smoke replay monitor
+.PHONY: setup lint format test check data train export audit mlflow-ui serve image smoke replay monitor
 
 setup:   ## Create the virtual environment and install dependencies
 	uv sync
@@ -24,6 +24,9 @@ train:   ## Train v2, log to MLflow, register; promote to champion if gates pass
 
 export:  ## Export the champion model to artifacts/model for the service image
 	uv run python -m readmission_mlops.models.export
+
+audit:   ## Fairness audit of the exported champion on the test set
+	uv run python -m readmission_mlops.models.audit
 
 mlflow-ui: ## Browse runs and the registry at http://127.0.0.1:5000
 	uv run mlflow ui --backend-store-uri sqlite:///mlflow.db --host 127.0.0.1

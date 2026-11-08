@@ -6,19 +6,36 @@ Taking a validated healthcare model from a laptop to a versioned, tested, monito
 ![Python](https://img.shields.io/badge/python-3.12-blue)
 ![Licence](https://img.shields.io/badge/licence-MIT-green)
 
-**Status:** In development, step 6 of 7. Deployed to Azure Container Apps.
+**Status:** Complete as a portfolio project and deployed. No real users depend on it, and it is not for clinical use.
 
-**Live demo:** [interactive API docs](https://ca-readmission-api.purplemushroom-33c1d15b.francecentral.azurecontainerapps.io/docs). The app scales to zero when idle, so the first request can be slow. It is a portfolio demo trained on public data and is not for clinical use.
+**Live demo:** [interactive API docs](https://ca-readmission-api.purplemushroom-33c1d15b.francecentral.azurecontainerapps.io/docs). The app scales to zero when idle, so the first request takes a few seconds. Please do not enter real patient details.
+
+## At a glance
+| | |
+|---|---|
+| **Problem** | A validated readmission model is no use on a laptop. A care team needs a service that scores a discharge, explains the score, traces it to its model and warns when something drifts. |
+| **Data** | UCI Diabetes 130-US Hospitals 1999–2008 (public, de-identified, CC BY 4.0). Production traffic is simulated. |
+| **Approach** | Tracked training with promotion checks, an explained API, a tested container, CI that retrains and deploys on every merge, and monitoring with thresholds fixed in advance |
+| **Result** | Test PR-AUC **0.231** against a no-skill 0.114; the top 20% of discharges reaches **37.9%** of readmissions. Live predictions take about **90 ms**. The monitoring caught **both** problems planted in a six-month simulation, with no false alarms in the normal months. |
+| **Stack** | Python 3.12, XGBoost, MLflow, FastAPI, Docker, GitHub Actions, GHCR, Azure Container Apps, OIDC, uv, pytest |
+
+![Live API documentation](docs/live-api.png)
+
+Documents: [Model card](docs/MODEL_CARD.md) · [Runbook](docs/RUNBOOK.md) · [Design and decisions](docs/DESIGN.md) · [Findings for non-technical readers](reports/findings.md)
 
 ## The problem
 [`readmission-risk-model`](https://github.com/MulengaSnr/readmission-risk-model) built a calibrated, explained and fairness-audited model that predicts 30-day readmission for patients with diabetes. A model on a laptop helps no one. A care team needs a service that scores a discharge on request, explains the score, can be traced to the exact model that produced it, and warns when something drifts. This project shows the difference between **developing** a model and **operating** one.
 
-## Planned architecture
+## Architecture
 ```
- train ──► MLflow (tracking + registry) ──► FastAPI service in Docker ──► Azure Container Apps
-                                               │ prediction log
-                                               ▼
-                                    monitoring: drift, calibration, recall by group
+ merge to main ──► GitHub Actions: tests ──► container test ──► retrain + promotion checks
+                                                                     │
+                     image in GitHub Container Registry ◄────────────┘
+                                     │ OIDC login, no stored cloud credentials
+                                     ▼
+ Azure Container Apps: FastAPI + model ──► live smoke test
+
+ replay (6 simulated months) ──► prediction log ──► monitoring: drift, calibration, recall by group
 ```
 Full design, decisions and alert thresholds: [docs/DESIGN.md](docs/DESIGN.md).
 
@@ -41,7 +58,7 @@ Full design, decisions and alert thresholds: [docs/DESIGN.md](docs/DESIGN.md).
 | Endpoint | Returns |
 |---|---|
 | `POST /predict` | Probability of 30-day readmission, risk band, the **top 3 reasons** (exact TreeSHAP) and warnings |
-| `POST /predict/batch` | The same for up to 1,000 encounters (used for replay in step 5) |
+| `POST /predict/batch` | The same for up to 1,000 encounters (used by the replay) |
 | `GET /health` | Whether a model is loaded, and its version |
 | `GET /model-info` | Model version, MLflow run, data fingerprint, code versions, band cut-offs, offline metrics |
 
@@ -56,8 +73,8 @@ Example response for an 80–90-year-old with 4 inpatient stays in the previous 
 
 - **Input validation:** closed categories (sex, age band, test results, medication status) must be known values, so a typo returns 422 instead of a silent guess. Open categories (admission type and source, discharge destination, specialty) accept new values with a warning. Diagnosis codes must be valid ICD-9. Length of stay must be 1–14 days, the training population. **Unknown fields are rejected, so identifiers can never be sent or logged.**
 - **Risk bands** use cut-offs from out-of-fold training predictions (highest 10%: risk ≥ 19.7%; top 20%: ≥ 15.2%). On the test set they flag 10.1% and 19.9% of encounters.
-- **Prediction log:** one JSON line per prediction (time, request ID, model version, inputs, score) feeds monitoring in step 5.
-- **Speed:** about 90 ms per explained prediction on a laptop.
+- **Prediction log:** one JSON line per prediction (time, request ID, model version, inputs, score) feeds monitoring.
+- **Speed:** a median of 91 ms per explained prediction against the live service (10 calls). One cold start from zero took 6 seconds.
 
 ## Container and CI/CD
 **Image** ([Dockerfile](Dockerfile)): a two-stage build. uv installs the locked runtime dependencies only (no MLflow, no test tools), and the slim runtime image holds the environment, the code and the model.
@@ -72,8 +89,16 @@ Example response for an 80–90-year-old with 4 inpatient stays in the previous 
 | `lint-and-test` | Every PR and push | ruff + pytest |
 | `container` | Every PR and push | Builds the image around a tiny **synthetic** model, runs it and smoke-tests it: health, model info, prediction, identifier and typo rejection, non-root, Docker health check |
 | `release` | Merges to `main` | Downloads the data (cached, re-verified by SHA-256), **retrains the real model**, fails the build if the promotion checks fail, exports it, builds and smoke-tests the image, and pushes it to GitHub Container Registry as `sha-<commit>` and `latest` |
+| `deploy` | Merges to `main`, after `release` | Logs in to Azure with OIDC, rolls out that exact image and smoke-tests the live URL |
 
-Training is deterministic, so CI rebuilds exactly the model validated locally from code and data, and every image can be traced to a commit, a data checksum and passed promotion checks. Images from this private repo are private in the registry.
+Training is deterministic, so CI rebuilds the model validated locally from code and data. The live service's metrics, risk cut-offs and data fingerprint match the local model, and every image can be traced to a commit, a data checksum and passed promotion checks.
+
+## Deployment
+Azure Container Apps on the Consumption plan, in France Central, with the app capped at 0.5 vCPU, 1 GiB and one copy.
+
+- **No cloud credentials in GitHub.** Actions logs in through OIDC to a managed identity that can only be used from `main` of this repo and can only change this resource group.
+- **Designed for £0.** It scales to zero when idle and is expected to stay within the monthly free grant, with a spending limit on the subscription and a budget alert. The cost has not yet been confirmed against a billing period.
+- **Trade-offs accepted for a demo:** no API key, no stored logs, cold starts and one copy. The reasons are in the [design decisions](docs/DESIGN.md#6-decisions), and day-to-day operation is in the [runbook](docs/RUNBOOK.md).
 
 ## Monitoring
 Every prediction is logged. A monitoring job joins the log with outcomes (which arrive 30 days later) and compares each month with a **reference profile** saved with the model: out-of-fold score distribution, input distributions, missing rates and recall at the fixed top-20% cut-off. Checks are graded OK / WARN / ALERT against thresholds fixed in [DESIGN.md](docs/DESIGN.md#7-monitoring-thresholds-initial) before any data was seen.
@@ -97,6 +122,14 @@ Every prediction is logged. A monitoring job joins the log with outcomes (which 
 ## Data and governance
 - Public, de-identified UCI Diabetes 130-US Hospitals data (CC BY 4.0). No real or personal data is used. Production traffic is simulated by replaying held-out records.
 - Data preparation reuses project 1's code, installed as a library pinned to its [`v1.0` release](https://github.com/MulengaSnr/readmission-risk-model/releases/tag/v1.0).
+- **Fairness audit of v2** (`make audit`, same method as v1.0): calibration is within about 1 point for every group reported. Patients aged 80+ have the lowest recall among adequately sized groups (34.8% against 37.5% for ages 60–79; gap −2.7 pts, 95% CI −8.0 to +3.2). Four small groups have too few readmissions to judge. Full table: [model card](docs/MODEL_CARD.md#subgroup-performance-fairness).
+
+## Limitations
+- **Trained on US hospital data from 1999–2008.** Performance in the NHS is unknown, and it would need local validation and information-governance approval before any real use.
+- **Modest accuracy** (ROC-AUC 0.67). About 62% of readmissions fall outside the top 20%, so the score can prioritise follow-up but must not rule anyone out.
+- **Monitoring has only run on simulated traffic.** The live prediction log is temporary and is lost when the app scales to zero, so live requests are not monitored.
+- **The deployment is a demo:** the endpoint is open with no API key, there is one copy and no stored logs, and it runs on a student subscription, so it will need moving when that ends. Rollback has not been drilled.
+- **v2's overall test metrics have no bootstrap intervals,** and global SHAP drivers were analysed for v1.0, not recalculated for v2.
 
 ## Run it
 ```bash
@@ -111,17 +144,16 @@ make image       # build the Docker image around artifacts/model
 make smoke       # run the image and smoke-test it
 make replay      # simulate six months of traffic through the API
 make monitor     # monitoring report: drift, missing values, calibration, recall, fairness
+make audit       # fairness audit of the exported model on the test set
 make check       # lint + tests
 ```
 
-## Progress
-- [x] 1. Scaffold, project 1 dependency, design
-- [x] 2. Training pipeline with MLflow tracking and registry
-- [x] 3. FastAPI service with validation, explanations and tests
-- [x] 4. Docker image and container smoke test in CI
-- [x] 5. Monitoring and replay simulation
-- [x] 6. Azure deployment (free tier)
-- [ ] 7. README, model card and runbook
+## Next steps
+- Store the prediction log outside the container, so live traffic can be monitored as well as simulated traffic.
+- Run the monitoring job on a schedule, with alerts sent to a person.
+- Add an API key and rate limiting before any wider use.
+- Drill a rollback, and record the time it takes.
+- Validate on recent UK data, if a suitable dataset becomes available.
 
 ## Author
 **Enock Mulenga**, Data Scientist · [LinkedIn](https://www.linkedin.com/in/enock-mulenga-8472ba137) · [Portfolio](https://mulengasnr.github.io)
