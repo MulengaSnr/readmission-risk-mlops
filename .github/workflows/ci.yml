@@ -3,6 +3,14 @@ name: CI
 on:
   push:
     branches: [main]
+    # A merge that only changes these does not retrain or redeploy.
+    # Pull requests always run their checks.
+    paths-ignore:
+      - "**.md"
+      - "docs/**"
+      - "reports/**"
+      - "notebooks/**"
+      - "LICENSE"
   pull_request:
 
 permissions:

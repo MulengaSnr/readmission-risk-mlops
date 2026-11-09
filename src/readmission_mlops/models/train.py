@@ -10,13 +10,13 @@ Each run:
    (without ``payer_code``) -> XGBoost with project 1's tuned settings;
 2. scores it with 5-fold patient-grouped cross-validation (same folds as
    project 1);
-3. refits on the full training set and scores the test set. This is the
-   **second** use of the test set (v1.0 used it first), so it checks v2
-   against v1.0 and is not used to choose between options;
+3. refits on the full training set and scores the test set, for reporting
+   only. CI retrains on every code change, so a promotion gate on this score
+   would reuse the test set again and again (design decision D19);
 4. logs parameters, metrics, per-fold results, data fingerprints and code
    versions to MLflow, and registers the model;
 5. points the ``champion`` alias at the new version only if it passes the
-   promotion gates in ``configs/default.yaml``.
+   cross-validation gates in ``configs/default.yaml``.
 """
 
 from __future__ import annotations
@@ -76,14 +76,14 @@ def build_model(config: dict[str, Any]) -> Pipeline:
     )
 
 
-def check_gates(
-    cv_pr_auc: float, test_pr_auc: float, promotion: dict[str, float]
-) -> list[str]:
+def check_gates(cv_pr_auc: float, promotion: dict[str, float]) -> list[str]:
     """Reasons the model must not be promoted; an empty list means it passes.
+
+    Only cross-validation on the training set is used, so the automated gate
+    never consumes the test set.
 
     Args:
         cv_pr_auc: Mean cross-validated PR-AUC.
-        test_pr_auc: PR-AUC on the test set.
         promotion: The ``promotion`` section of the configuration.
 
     Returns:
@@ -94,11 +94,11 @@ def check_gates(
         failures.append(
             f"CV PR-AUC {cv_pr_auc:.4f} < minimum {promotion['min_cv_pr_auc']}"
         )
-    floor = promotion["reference_test_pr_auc"] - promotion["max_test_pr_auc_drop"]
-    if test_pr_auc < floor:
+    floor = promotion["reference_cv_pr_auc"] - promotion["max_cv_pr_auc_drop"]
+    if cv_pr_auc < floor:
         failures.append(
-            f"test PR-AUC {test_pr_auc:.4f} < floor {floor:.4f} (v1.0 reference "
-            f"minus allowed drop {promotion['max_test_pr_auc_drop']})"
+            f"CV PR-AUC {cv_pr_auc:.4f} < floor {floor:.4f} (v1.0 reference "
+            f"minus allowed drop {promotion['max_cv_pr_auc_drop']})"
         )
     return failures
 
@@ -209,9 +209,7 @@ def train(config: dict[str, Any], root: Path = PROJECT_ROOT) -> dict[str, Any]:
     test_metrics = evaluate(y_test, prob, capacities)
 
     name = config["model"]["name"]
-    failures = check_gates(
-        cv_summary[("pr_auc", "mean")], test_metrics["pr_auc"], config["promotion"]
-    )
+    failures = check_gates(cv_summary[("pr_auc", "mean")], config["promotion"])
     mlflow.set_tracking_uri(
         resolve_tracking_uri(config["mlflow"]["tracking_uri"], root)
     )
@@ -233,7 +231,7 @@ def train(config: dict[str, Any], root: Path = PROJECT_ROOT) -> dict[str, Any]:
                 "model_version_label": config["model"]["version_label"],
                 "train_fingerprint": data_fingerprint(train_df),
                 "test_fingerprint": data_fingerprint(test_df),
-                "test_set_use": "second (v1.0 was evaluated on it first)",
+                "test_set_use": "reporting only (v1.0 was evaluated on it first)",
                 "readmission_risk_version": importlib.metadata.version(
                     "readmission-risk"
                 ),

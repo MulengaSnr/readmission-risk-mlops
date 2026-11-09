@@ -40,8 +40,8 @@ PR-AUC is the primary metric, because readmissions are the minority class and th
 | Precision, top 20% | 21.6% | 21.9% | 11.4% |
 
 - **Cross-validation:** PR-AUC 0.230 ± 0.014 (5-fold, patient-grouped), consistent with the test score.
-- **Promotion checks:** the model becomes champion only if cross-validated PR-AUC is at least 0.20 and test PR-AUC is no more than 0.01 below v1.0's. v2 is 0.003 below.
-- **Test-set use:** v1.0 was evaluated on this test set first. For v2 it is used only to check against that fixed limit and to report, not to choose between options.
+- **Promotion checks:** the model becomes champion only if cross-validated PR-AUC is at least 0.20 and no more than 0.01 below v1.0's 0.2335. v2's is 0.2298.
+- **Test-set use:** v1.0 was evaluated on this test set first. For v2 it is for reporting only. v2 scored 0.003 below v1.0, and no automated decision depends on that score.
 - **Intervals:** overall bootstrap intervals were calculated for v1.0, not for v2. The v1.0 PR-AUC interval is 0.216–0.257.
 - **Risk bands:** cut-offs come from out-of-fold training predictions (highest 10%: risk ≥ 19.7%; next 10%: ≥ 15.2%). On the test set they flag 10.1% and 19.9% cumulatively.
 

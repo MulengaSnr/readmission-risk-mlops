@@ -40,16 +40,20 @@ def test_serving_columns_are_raw_and_exclude_payer_and_race():
 
 # --- promotion gates -----------------------------------------------------
 
-PROMOTION = {"min_cv_pr_auc": 0.20, "reference_test_pr_auc": 0.2345,
-             "max_test_pr_auc_drop": 0.01}  # fmt: skip
+PROMOTION = {"min_cv_pr_auc": 0.20, "reference_cv_pr_auc": 0.2335,
+             "max_cv_pr_auc_drop": 0.01}  # fmt: skip
 
 
 @pytest.mark.parametrize(
-    ("cv", "test", "n_failures"),
-    [(0.23, 0.231, 0), (0.19, 0.231, 1), (0.23, 0.22, 1), (0.10, 0.10, 2)],
+    ("cv", "n_failures"),
+    [(0.2298, 0), (0.2236, 0), (0.2234, 1), (0.19, 2)],
 )
-def test_check_gates(cv, test, n_failures):
-    assert len(check_gates(cv, test, PROMOTION)) == n_failures
+def test_check_gates(cv, n_failures):
+    assert len(check_gates(cv, PROMOTION)) == n_failures
+
+
+def test_promotion_settings_do_not_refer_to_the_test_set():
+    assert not [key for key in load_config()["promotion"] if "test" in key]
 
 
 def test_resolve_tracking_uri(tmp_path):
@@ -97,7 +101,7 @@ def test_train_register_promote_export(tmp_path, monkeypatch):
     config = copy.deepcopy(load_config())
     config["cv"]["n_splits"] = 2
     config["model"]["xgboost_params"]["n_estimators"] = 20
-    config["promotion"].update(min_cv_pr_auc=0.0, reference_test_pr_auc=0.0)
+    config["promotion"].update(min_cv_pr_auc=0.0, reference_cv_pr_auc=0.0)
 
     result = train(config, root=tmp_path)
     assert result["promoted"] and result["model_version"] == "1"

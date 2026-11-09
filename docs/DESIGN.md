@@ -24,7 +24,7 @@ This project shows the difference between **developing** a model and **operating
 
 ## 4. Model
 - **v2:** project 1's tuned XGBoost settings, refitted **without `payer_code`** (decision in project 1, PR #12 and issue #13). Training uses the full training set.
-- Its test-set score is reported as a **second use of the test set**: v1.0 was already evaluated on it. It is used to check v2 against v1.0, not to choose between options.
+- Its test-set score is reported as a **second use of the test set**: v1.0 was already evaluated on it. It is for reporting only, and promotion depends on cross-validation (D19).
 
 ## 5. Architecture
 ```
@@ -66,6 +66,7 @@ This project shows the difference between **developing** a model and **operating
 | D17 | No log storage (added in step 6) | Keeps the demo at £0. **Consequence found afterwards:** the log stream is unavailable too, so failures are diagnosed from app state and by running the same image locally (see the runbook) | A Log Analytics workspace (possible cost beyond its free allowance) |
 | D18 | No API key on the demo (added in step 6) | Section 2 allowed a demo-level key but did not require one. The API rejects unknown fields, holds no stored data, and is capped at one copy under a spending limit | A shared key in a public demo, which adds friction and little protection |
 | D11 | Models saved with skops, loaded with an allow-list held **in our code** (added in step 2) | Unpickling can run arbitrary code. MLflow's own loader reads the trusted types from the model's metadata, which a tampered file could edit, so the export and the service load with `serialization.TRUSTED_TYPES` instead | Pickle or joblib (unsafe); `MLFLOW_ALLOW_MODEL_CODE_EXECUTION=true` (switches the safety check off) |
+| D19 | Promotion gates use cross-validation only, and merges that change only documentation do not run the release (added after the portfolio review) | CI retrains on every code change, so a gate on the test score reused the test set each time, and a run of near-misses could tune to it. Documentation changes have no reason to retrain or redeploy. The 0.01 limit is the size the original test gate used, but it was set against v1.0's cross-validation score after v2's was known | Keeping the test gate (repeated reuse of the test set); a separate validation set (would change the training data and the model); not scoring the test set in CI (`/model-info` would lose its reported metrics) |
 
 ## 7. Monitoring thresholds (initial)
 Thresholds are fixed now and revisited only with evidence:
