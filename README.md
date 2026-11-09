@@ -1,6 +1,6 @@
 # Readmission Risk Model in Production
 
-Taking a validated healthcare model from a laptop to a versioned, tested, monitored service: MLflow, FastAPI, Docker, GitHub Actions and Azure.
+Taking a validated healthcare model from a laptop to a versioned, tested service, with monitoring exercised on simulated traffic: MLflow, FastAPI, Docker, GitHub Actions and Azure.
 
 ![CI](https://github.com/MulengaSnr/readmission-risk-mlops/actions/workflows/ci.yml/badge.svg)
 ![Python](https://img.shields.io/badge/python-3.12-blue)
@@ -16,7 +16,7 @@ Taking a validated healthcare model from a laptop to a versioned, tested, monito
 | **Problem** | A validated readmission model is no use on a laptop. A care team needs a service that scores a discharge, explains the score, traces it to its model and warns when something drifts. |
 | **Data** | UCI Diabetes 130-US Hospitals 1999–2008 (public, de-identified, CC BY 4.0). Production traffic is simulated. |
 | **Approach** | Tracked training with promotion checks, an explained API, a tested container, CI that retrains and deploys on every merge, and monitoring with thresholds fixed in advance |
-| **Result** | Test PR-AUC **0.231** against a no-skill 0.114; the top 20% of discharges reaches **37.9%** of readmissions. Live predictions take about **90 ms**. The monitoring caught **both** problems planted in a six-month simulation, with no false alarms in the normal months. |
+| **Result** | Test PR-AUC **0.231** against a no-skill 0.114; the top 20% of discharges reaches **37.9%** of readmissions. Live predictions take about **90 ms**. The monitoring caught **both** problems planted in a six-month simulation, with no false alarms in the normal months. The same author planted the problems and wrote the monitor, and live traffic is not monitored. |
 | **Stack** | Python 3.12, XGBoost, MLflow, FastAPI, Docker, GitHub Actions, GHCR, Azure Container Apps, OIDC, uv, pytest |
 
 ![Live API documentation](docs/live-api.png)

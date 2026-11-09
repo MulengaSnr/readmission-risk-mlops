@@ -10,7 +10,7 @@ A model that estimates which patients with diabetes may return to hospital withi
 2. **Most readmissions are still missed.** About 62% are not in the top 20%. The score can help decide who to call first, but it cannot be used to decide who does not need support.
 3. **Scores mean about the same thing for every group checked.** For each sex, age and race group reported, predicted and actual readmission rates are within about 1 percentage point.
 4. **Patients aged 80 and over remain the weakest group.** The model flags 34.8% of their readmissions, against 37.5% for ages 60–79. That gap is too uncertain to call real or to rule out. Four smaller ethnic groups had too few readmissions to judge.
-5. **The monitoring caught both problems planted in a six-month simulation,** and named the cause each time: an older patient population in month 5, and a data feed failing in month 6. The four normal months raised no alarms.
+5. **The monitoring caught both problems planted in a six-month simulation,** and named the cause each time: an older patient population in month 5, and a data feed failing in month 6. The four normal months raised no alarms. The same author planted the problems and built the monitoring, so this shows it works on those problems, not how it would handle unexpected ones.
 6. **A change in patients is not always a problem for the model.** In the older-population month, the inputs changed but the risk estimates stayed accurate. An automatic retrain would have been the wrong response, so alerts go to a person to investigate.
 7. **An early version of the monitoring gave false alarms** because it judged performance on too few months of results. It now waits for three months. The alert thresholds were not changed to make the results look better.
 
