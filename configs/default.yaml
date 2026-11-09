@@ -50,9 +50,10 @@ mlflow:
 promotion:
   # A trained model becomes "champion" only if it passes these gates.
   min_cv_pr_auc: 0.20            # well above the no-skill 0.114
-  # v1.0 test PR-AUC was 0.2345 (project 1 reports/metrics/test_metrics.csv).
-  reference_test_pr_auc: 0.2345
-  max_test_pr_auc_drop: 0.01
+  # v1.0 cross-validated PR-AUC (project 1 reports/metrics/model_cv.csv).
+  # Cross-validation only: CI runs this on every code change (decision D19).
+  reference_cv_pr_auc: 0.2335
+  max_cv_pr_auc_drop: 0.01
 
 monitoring:
   # Thresholds fixed in docs/DESIGN.md section 7 before any data was seen.

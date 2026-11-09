@@ -15,7 +15,7 @@ Taking a validated healthcare model from a laptop to a versioned, tested service
 |---|---|
 | **Problem** | A validated readmission model is no use on a laptop. A care team needs a service that scores a discharge, explains the score, traces it to its model and warns when something drifts. |
 | **Data** | UCI Diabetes 130-US Hospitals 1999–2008 (public, de-identified, CC BY 4.0). Production traffic is simulated. |
-| **Approach** | Tracked training with promotion checks, an explained API, a tested container, CI that retrains and deploys on every merge, and monitoring with thresholds fixed in advance |
+| **Approach** | Tracked training with promotion checks, an explained API, a tested container, CI that retrains and deploys on every code change, and monitoring with thresholds fixed in advance |
 | **Result** | Test PR-AUC **0.231** against a no-skill 0.114; the top 20% of discharges reaches **37.9%** of readmissions. Live predictions take about **90 ms**. The monitoring caught **both** problems planted in a six-month simulation, with no false alarms in the normal months. The same author planted the problems and wrote the monitor, and live traffic is not monitored. |
 | **Stack** | Python 3.12, XGBoost, MLflow, FastAPI, Docker, GitHub Actions, GHCR, Azure Container Apps, OIDC, uv, pytest |
 
@@ -47,7 +47,8 @@ Full design, decisions and alert thresholds: [docs/DESIGN.md](docs/DESIGN.md).
 | v1.0 (project 1, with payer) | 0.234 ± 0.015 | 0.235 | 0.672 | 38.5% |
 | **v2 (this project, no payer)** | **0.230 ± 0.014** | **0.231** | **0.670** | **37.9%** |
 
-- **The v2 test score is a second use of the test set.** v1.0 was evaluated on it first. The score is used only to check v2 against v1.0, against a limit fixed in advance (no more than 0.01 PR-AUC below v1.0), not to choose between options. v2 is 0.003 lower and passed.
+- **The test score is for reporting only.** v1.0 was evaluated on this test set first, so v2's score is a second use. It came out 0.003 below v1.0, within a limit of 0.01 fixed in advance.
+- **Promotion depends only on cross-validation.** CI retrains on every code change, so a gate on the test score would reuse the test set each time. The gates are a cross-validated PR-AUC of at least 0.20 and no more than 0.01 below v1.0's 0.2335 (design decision D19).
 - **The cross-validation score reproduces project 1:** 0.2335 − 0.0037 = 0.2298, as found by project 1's payer analysis.
 - **Safe model files:** models are saved with skops, not pickle. When the service loads a model, it accepts only the object types listed in [`serialization.py`](src/readmission_mlops/models/serialization.py), held in our code rather than in the model file (design decision D11).
 - `make export` writes the champion to `artifacts/model/` (`model.skops` + `metadata.json`) for the service image. `make mlflow-ui` lets you browse runs and the registry.
@@ -88,10 +89,10 @@ Example response for an 80–90-year-old with 4 inpatient stays in the previous 
 |---|---|---|
 | `lint-and-test` | Every PR and push | ruff + pytest |
 | `container` | Every PR and push | Builds the image around a tiny **synthetic** model, runs it and smoke-tests it: health, model info, prediction, identifier and typo rejection, non-root, Docker health check |
-| `release` | Merges to `main` | Downloads the data (cached, re-verified by SHA-256), **retrains the real model**, fails the build if the promotion checks fail, exports it, builds and smoke-tests the image, and pushes it to GitHub Container Registry as `sha-<commit>` and `latest` |
-| `deploy` | Merges to `main`, after `release` | Logs in to Azure with OIDC, rolls out that exact image and smoke-tests the live URL |
+| `release` | Merges to `main` that change code | Downloads the data (cached, re-verified by SHA-256), **retrains the real model**, fails the build if the promotion checks fail, exports it, builds and smoke-tests the image, and pushes it to GitHub Container Registry as `sha-<commit>` and `latest` |
+| `deploy` | After `release` | Logs in to Azure with OIDC, rolls out that exact image and smoke-tests the live URL |
 
-Training is deterministic, so CI rebuilds the model validated locally from code and data. The live service's metrics, risk cut-offs and data fingerprint match the local model, and every image can be traced to a commit, a data checksum and passed promotion checks.
+Merges that change only documentation or reports do not retrain or redeploy. Training is deterministic, so CI rebuilds the model validated locally from code and data. The live service's metrics, risk cut-offs and data fingerprint match the local model, and every image can be traced to a commit, a data checksum and passed promotion checks.
 
 ## Deployment
 Azure Container Apps on the Consumption plan, in France Central, with the app capped at 0.5 vCPU, 1 GiB and one copy.

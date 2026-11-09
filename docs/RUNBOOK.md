@@ -45,7 +45,7 @@ The smoke test should end with every line `PASS`. Measured on 8 November 2026 fr
 ## Deploy
 _Exercised: PR #6 deployed `sha-31b4892` through this path._
 
-Merge a PR to `main`. CI then runs `lint-and-test`, `container`, `release` (retrains, applies the promotion checks and pushes the image) and `deploy` (logs in with OIDC, updates the app and smoke-tests the live URL). If an earlier job fails, nothing is deployed.
+Merge a PR to `main`. If it changes only Markdown files, `docs/`, `reports/`, `notebooks/` or the licence, CI does not run on `main`, so nothing retrains or redeploys. Otherwise CI runs `lint-and-test`, `container`, `release` (retrains, applies the promotion checks and pushes the image) and `deploy` (logs in with OIDC, updates the app and smoke-tests the live URL). If an earlier job fails, nothing is deployed.
 
 ## Roll back
 _Not drilled. It uses the same `az containerapp update` command that CI's deploy has exercised._
